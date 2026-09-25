@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader, StatCard } from "@/components/StatCard";
 import { SyncBadge } from "@/components/SyncBadge";
-import { formatVND, formatNumber, formatDate } from "@/lib/format";
+import { formatNumber, formatDate } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
 
 const STATUS_LABEL: Record<string, string> = {
   moi: "Mới",
@@ -10,93 +12,78 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function CustomersPage() {
-  const salesUsers = await prisma.user.findMany({
-    where: { role: "SALES", active: true },
-  });
+  const [salesUsers, careBySales, customersBySales, recentCares, totalCustomers, totalCares] =
+    await Promise.all([
+      prisma.user.findMany({
+        where: { role: "SALES", active: true, email: { endsWith: "@crm.local" } },
+        select: { id: true, name: true },
+      }),
+      prisma.careLog.groupBy({ by: ["salesId"], _count: { _all: true } }),
+      prisma.customer.groupBy({
+        by: ["assignedSalesId"],
+        where: { source: "crm_incomsoft" },
+        _count: { _all: true },
+      }),
+      prisma.careLog.findMany({
+        where: { customer: { source: "crm_incomsoft" } },
+        orderBy: { date: "desc" },
+        take: 30,
+        include: { customer: true, sales: true },
+      }),
+      prisma.customer.count({ where: { source: "crm_incomsoft" } }),
+      prisma.careLog.count({ where: { customer: { source: "crm_incomsoft" } } }),
+    ]);
 
-  const perSales = await Promise.all(
-    salesUsers.map(async (sales) => {
-      const [orders, careCount, customerCount] = await Promise.all([
-        prisma.order.findMany({ where: { salesId: sales.id } }),
-        prisma.careLog.count({ where: { salesId: sales.id } }),
-        prisma.customer.count({ where: { assignedSalesId: sales.id } }),
-      ]);
-      const revenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
-      const completed = orders.filter((o) => o.status === "completed").length;
-      const closeRate = orders.length
-        ? Math.round((completed / orders.length) * 100)
-        : 0;
-
-      return {
-        id: sales.id,
-        name: sales.name,
-        revenue,
-        orderCount: orders.length,
-        closeRate,
-        careCount,
-        customerCount,
-      };
-    })
-  );
-
-  const recentCustomers = await prisma.customer.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    include: { assignedSales: true, careLogs: { orderBy: { date: "desc" }, take: 1 } },
-  });
-
-  const totalRevenue = perSales.reduce((s, x) => s + x.revenue, 0);
-  const totalOrders = perSales.reduce((s, x) => s + x.orderCount, 0);
-  const totalCustomers = await prisma.customer.count();
+  const careMap = new Map(careBySales.map((c) => [c.salesId, c._count._all]));
+  const custMap = new Map(customersBySales.map((c) => [c.assignedSalesId, c._count._all]));
+  const perSales = salesUsers
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      cares: careMap.get(s.id) ?? 0,
+      customers: custMap.get(s.id) ?? 0,
+    }))
+    .sort((a, b) => b.cares - a.cares);
 
   return (
     <div>
       <PageHeader
         title="Chăm sóc khách hàng"
-        description="Doanh thu, doanh số, đơn hàng, tỉ lệ chốt đơn và khách hàng đã chăm sóc theo từng sales"
+        description="Khách hàng được nhân viên chăm sóc, lấy từ CRM mỗi ngày"
         badge={<SyncBadge module="customers" />}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Tổng doanh thu (đơn)" value={formatVND(totalRevenue)} />
-        <StatCard label="Tổng đơn hàng" value={formatNumber(totalOrders)} />
-        <StatCard label="Số sales đang hoạt động" value={formatNumber(salesUsers.length)} />
-        <StatCard label="Tổng khách hàng" value={formatNumber(totalCustomers)} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Khách hàng đã chăm sóc" value={formatNumber(totalCustomers)} />
+        <StatCard label="Tổng lượt chăm sóc" value={formatNumber(totalCares)} />
+        <StatCard label="Nhân viên tham gia" value={formatNumber(perSales.length)} />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-700">
-            Bảng theo từng Sales
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-800">Theo từng nhân viên</h2>
         </div>
         <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Sales</th>
-              <th className="px-4 py-3">Doanh thu</th>
-              <th className="px-4 py-3">Đơn hàng</th>
-              <th className="px-4 py-3">Tỉ lệ chốt đơn</th>
-              <th className="px-4 py-3">Khách hàng phụ trách</th>
-              <th className="px-4 py-3">Lượt chăm sóc</th>
+          <thead>
+            <tr className="text-left">
+              <th className="px-4 py-3">Nhân viên</th>
+              <th className="px-4 py-3 text-right">Khách hàng</th>
+              <th className="px-4 py-3 text-right">Lượt chăm sóc</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {perSales.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
-                  Chưa có sales nào.
+                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
+                  Chưa có dữ liệu. Chờ schedule CSKH đồng bộ.
                 </td>
               </tr>
             ) : (
               perSales.map((s) => (
                 <tr key={s.id}>
-                  <td className="px-4 py-3 font-medium text-slate-800">{s.name}</td>
-                  <td className="px-4 py-3">{formatVND(s.revenue)}</td>
-                  <td className="px-4 py-3">{formatNumber(s.orderCount)}</td>
-                  <td className="px-4 py-3">{s.closeRate}%</td>
-                  <td className="px-4 py-3">{formatNumber(s.customerCount)}</td>
-                  <td className="px-4 py-3">{formatNumber(s.careCount)}</td>
+                  <td className="px-4 py-3 font-medium">{s.name}</td>
+                  <td className="px-4 py-3 text-right">{formatNumber(s.customers)}</td>
+                  <td className="px-4 py-3 text-right">{formatNumber(s.cares)}</td>
                 </tr>
               ))
             )}
@@ -104,48 +91,46 @@ export default async function CustomersPage() {
         </table>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-700">
-            Khách hàng đã chăm sóc gần đây
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-800">Lượt chăm sóc gần đây</h2>
         </div>
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Khách hàng</th>
-              <th className="px-4 py-3">Sales phụ trách</th>
-              <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3">Chăm sóc gần nhất</th>
-              <th className="px-4 py-3">Ngày tạo</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {recentCustomers.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
-                  Chưa có khách hàng nào.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead>
+              <tr className="text-left">
+                <th className="px-4 py-3">Ngày</th>
+                <th className="px-4 py-3">Khách hàng</th>
+                <th className="px-4 py-3">Nhân viên</th>
+                <th className="px-4 py-3">Trạng thái</th>
+                <th className="px-4 py-3">Nội dung chăm sóc</th>
               </tr>
-            ) : (
-              recentCustomers.map((c) => (
-                <tr key={c.id}>
-                  <td className="px-4 py-3 font-medium text-slate-800">{c.name}</td>
-                  <td className="px-4 py-3">{c.assignedSales?.name ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                      {STATUS_LABEL[c.status] ?? c.status}
-                    </span>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {recentCares.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                    Chưa có lượt chăm sóc nào.
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
-                    {c.careLogs[0]?.note ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(c.createdAt)}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                recentCares.map((c) => (
+                  <tr key={c.id}>
+                    <td className="whitespace-nowrap px-4 py-3">{formatDate(c.date)}</td>
+                    <td className="px-4 py-3 font-medium">{c.customer.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{c.sales.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                        {STATUS_LABEL[c.customer.status] ?? c.customer.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{c.note}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

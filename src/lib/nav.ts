@@ -2,16 +2,19 @@ export type NavItem = {
   href: string;
   label: string;
   icon: string;
+  hidden?: boolean;
 };
 
-export const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   { href: "/", label: "Tổng quan", icon: "layout" },
   { href: "/customers", label: "Chăm sóc khách hàng", icon: "users" },
-  { href: "/revenue", label: "Doanh thu", icon: "trending" },
-  { href: "/finance", label: "Tài chính & công nợ", icon: "wallet" },
-  { href: "/inventory", label: "Nhập kho", icon: "package" },
-  { href: "/ads", label: "Google Ads", icon: "megaphone" },
-  { href: "/facebook", label: "Facebook", icon: "thumbs" },
   { href: "/email", label: "Email", icon: "mail" },
-  { href: "/calendar", label: "Checklist lịch", icon: "check" },
+  { href: "/revenue", label: "Doanh thu", icon: "trending", hidden: true },
+  { href: "/finance", label: "Tài chính & công nợ", icon: "wallet", hidden: true },
+  { href: "/inventory", label: "Nhập kho", icon: "package", hidden: true },
+  { href: "/ads", label: "Google Ads", icon: "megaphone", hidden: true },
+  { href: "/facebook", label: "Facebook", icon: "thumbs", hidden: true },
+  { href: "/calendar", label: "Checklist lịch", icon: "check", hidden: true },
 ];
+
+export const navItems: NavItem[] = allNavItems.filter((i) => !i.hidden);

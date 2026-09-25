@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/StatCard";
+export const dynamic = "force-dynamic";
 import { SyncBadge } from "@/components/SyncBadge";
 import { formatDate } from "@/lib/format";
 
