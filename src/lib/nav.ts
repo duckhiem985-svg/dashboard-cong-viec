@@ -8,6 +8,7 @@ export type NavItem = {
 const allNavItems: NavItem[] = [
   { href: "/", label: "Tổng quan", icon: "layout" },
   { href: "/customers", label: "Chăm sóc khách hàng", icon: "users" },
+  { href: "/debt", label: "Công nợ", icon: "wallet" },
   { href: "/email", label: "Email", icon: "mail" },
   { href: "/revenue", label: "Doanh thu", icon: "trending", hidden: true },
   { href: "/finance", label: "Tài chính & công nợ", icon: "wallet", hidden: true },
