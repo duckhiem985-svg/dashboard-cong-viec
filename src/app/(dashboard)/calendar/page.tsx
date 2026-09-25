@@ -26,6 +26,8 @@ function vnParts(date: Date) {
 }
 
 export default async function CalendarPage() {
+  // The server query needs the current day in Vietnam when this page is requested.
+  // eslint-disable-next-line react-hooks/purity
   const todayVn = new Date(Date.now() + VN_OFFSET_MS);
   const startOfToday = new Date(
     Date.UTC(todayVn.getUTCFullYear(), todayVn.getUTCMonth(), todayVn.getUTCDate()) - VN_OFFSET_MS

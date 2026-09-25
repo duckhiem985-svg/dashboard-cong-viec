@@ -8,24 +8,10 @@ export function StatCard({
   hint?: string;
 }) {
   return (
-    <div
-      className="rounded-xl border p-5"
-      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-    >
-      <p className="text-[13px] font-medium" style={{ color: "var(--text-secondary)" }}>
-        {label}
-      </p>
-      <p
-        className="mt-2 text-[28px] font-semibold leading-none tracking-tight"
-        style={{ color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}
-      >
-        {value}
-      </p>
-      {hint && (
-        <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-          {hint}
-        </p>
-      )}
+    <div className="stat-card">
+      <p className="stat-card-label">{label}</p>
+      <p className="stat-card-value">{value}</p>
+      {hint && <p className="stat-card-hint">{hint}</p>}
     </div>
   );
 }
@@ -40,18 +26,15 @@ export function PageHeader({
   badge?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div className="page-header">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
-          {title}
-        </h1>
+        <span className="page-eyebrow">Báo cáo công việc</span>
+        <h1>{title}</h1>
         {description && (
-          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-            {description}
-          </p>
+          <p>{description}</p>
         )}
       </div>
-      {badge}
+      {badge && <div className="page-header-badge">{badge}</div>}
     </div>
   );
 }

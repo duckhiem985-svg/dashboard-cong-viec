@@ -22,14 +22,15 @@ export default async function DashboardLayout({
   const role = (session.user as { role?: string }).role ?? "SALES";
 
   return (
-    <div className="flex h-screen w-full">
+    <div className="dashboard-shell">
+      <a className="skip-link" href="#main-content">Bỏ qua điều hướng</a>
       <Sidebar
         userName={session.user.name ?? session.user.email ?? "Người dùng"}
         userRole={ROLE_LABEL[role] ?? role}
         footer={<SignOutButton />}
       />
-      <main className="flex-1 overflow-y-auto p-8" style={{ background: "var(--page)" }}>
-        <div className="mx-auto max-w-[1280px]">{children}</div>
+      <main id="main-content" className="dashboard-main">
+        <div className="dashboard-content">{children}</div>
       </main>
     </div>
   );

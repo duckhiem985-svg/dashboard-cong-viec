@@ -67,3 +67,72 @@ export function displayDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
+
+export type CareCustomer = {
+  id: string;
+  name: string;
+  staff: string[];
+  activities: { id: string; staff: string; note: string }[];
+};
+
+export type CareReport = {
+  iso: string;
+  customers: CareCustomer[];
+  activities: number;
+  staff: { name: string; customers: number; activities: number }[];
+};
+
+export function vnYesterdayIso(): string {
+  const d = new Date(Date.now() + 7 * 60 * 60 * 1000 - DAY_MS);
+  return d.toISOString().slice(0, 10);
+}
+
+export function shiftIso(iso: string, days: number): string {
+  return new Date(new Date(`${iso}T00:00:00.000Z`).getTime() + days * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+}
+
+export function foldText(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
+}
+
+export async function getCareReport(iso: string): Promise<CareReport> {
+  const start = new Date(`${iso}T00:00:00.000Z`);
+  const logs = await prisma.careLog.findMany({
+    where: {
+      customer: { source: "crm_incomsoft" },
+      date: { gte: start, lt: new Date(start.getTime() + DAY_MS) },
+    },
+    include: { customer: true, sales: true },
+    orderBy: { id: "asc" },
+  });
+
+  const byCustomer = new Map<string, CareCustomer>();
+  const byStaff = new Map<string, { customers: Set<string>; activities: number }>();
+  for (const l of logs) {
+    const c = byCustomer.get(l.customerId) ?? {
+      id: l.customerId,
+      name: l.customer.name,
+      staff: [],
+      activities: [],
+    };
+    if (!c.staff.includes(l.sales.name)) c.staff.push(l.sales.name);
+    c.activities.push({ id: l.id, staff: l.sales.name, note: l.note });
+    byCustomer.set(l.customerId, c);
+
+    const s = byStaff.get(l.sales.name) ?? { customers: new Set<string>(), activities: 0 };
+    s.customers.add(l.customerId);
+    s.activities += 1;
+    byStaff.set(l.sales.name, s);
+  }
+
+  return {
+    iso,
+    customers: [...byCustomer.values()].sort((a, b) => a.name.localeCompare(b.name, "vi")),
+    activities: logs.length,
+    staff: [...byStaff.entries()]
+      .map(([name, v]) => ({ name, customers: v.customers.size, activities: v.activities }))
+      .sort((a, b) => b.customers - a.customers),
+  };
+}

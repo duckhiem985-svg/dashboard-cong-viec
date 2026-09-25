@@ -15,29 +15,23 @@ export async function SyncBadge({ module }: { module: string }) {
 
   if (!status) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+      <span className="sync-badge">
+        <span className="sync-badge-dot" />
         Chưa đồng bộ tự động
       </span>
     );
   }
 
+  // Server-rendered sync status is intentionally compared with the request time.
   const minutesAgo = Math.round(
+    // eslint-disable-next-line react-hooks/purity
     (Date.now() - status.lastSyncedAt.getTime()) / 60000
   );
   const stale = minutesAgo > 60 * 26; // hơn ~1 ngày kể từ lần chạy schedule gần nhất
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-        stale ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          stale ? "bg-amber-500" : "bg-emerald-500"
-        }`}
-      />
+    <span className={`sync-badge ${stale ? "is-stale" : "is-fresh"}`}>
+      <span className="sync-badge-dot" />
       Cập nhật lúc {formatDateTime(status.lastSyncedAt)}
       {status.source ? ` · ${status.source}` : ""}
     </span>

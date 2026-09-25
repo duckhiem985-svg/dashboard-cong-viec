@@ -30,57 +30,39 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-semibold text-slate-900">Đăng nhập</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Dashboard theo dõi công việc nội bộ
-        </p>
-
-        {error && (
-          <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-            Email hoặc mật khẩu không đúng.
-          </p>
-        )}
-
-        <form action={login} className="mt-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700">
-              Tên đăng nhập
-            </label>
-            <input
-              name="email"
-              type="text"
-              required
-              autoCapitalize="none"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-              placeholder="Tên đăng nhập"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700">
-              Mật khẩu
-            </label>
-            <input
-              name="password"
-              type="password"
-              required
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-              placeholder="••••••••"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            Đăng nhập
-          </button>
-        </form>
-
-        <p className="mt-6 text-xs text-slate-400">
-          Tài khoản do quản trị viên cấp. Liên hệ founder nếu chưa có tài khoản.
-        </p>
-      </div>
-    </div>
+    <main className="login-shell">
+      <section className="login-story" aria-label="Bao Bì Giấy Toàn Quốc">
+        <div className="dashboard-brand">
+          <span>Bao Bì Giấy<br />Toàn Quốc</span>
+          <small>Không gian điều hành</small>
+        </div>
+        <div>
+          <span className="editorial-eyebrow">Dashboard nội bộ</span>
+          <h1>Một ngày,<br />một nhịp rõ ràng.</h1>
+          <p>Theo dõi công việc, chăm sóc khách hàng và email trong cùng một không gian.</p>
+        </div>
+        <span className="editorial-eyebrow">Bao Bì Giấy Toàn Quốc</span>
+      </section>
+      <section className="login-form-side" aria-labelledby="login-title">
+        <div className="login-card">
+          <span className="editorial-eyebrow">Chào mừng trở lại</span>
+          <h2 id="login-title">Đăng nhập</h2>
+          <p>Dùng tài khoản được cấp để vào bảng điều khiển công việc.</p>
+          {error && <p className="login-error" role="alert">Email hoặc mật khẩu không đúng.</p>}
+          <form action={login} className="mt-7 space-y-5">
+            <div>
+              <label htmlFor="login-email">Tên đăng nhập</label>
+              <input id="login-email" name="email" type="text" required autoComplete="username" autoCapitalize="none" placeholder="Tên đăng nhập" />
+            </div>
+            <div>
+              <label htmlFor="login-password">Mật khẩu</label>
+              <input id="login-password" name="password" type="password" required autoComplete="current-password" placeholder="••••••••" />
+            </div>
+            <button type="submit" className="login-submit">Đăng nhập</button>
+          </form>
+          <p className="mt-6 text-xs">Tài khoản do quản trị viên cấp. Liên hệ người quản trị nếu bạn chưa có tài khoản.</p>
+        </div>
+      </section>
+    </main>
   );
 }
