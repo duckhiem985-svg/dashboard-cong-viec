@@ -3,37 +3,41 @@ import { prisma } from "@/lib/prisma";
 import { checkIngestAuth, markSynced } from "@/lib/ingest";
 
 // Payload lấy từ Google Calendar MCP:
-// { items: [{ title, date, done?, assignedToName? }] }
+// { items: [{ externalId, title, date, allDay?, assignedToName? }] }
+// Trùng externalId thì cập nhật tiêu đề/ngày, giữ nguyên trạng thái "đã xong".
 export async function POST(req: NextRequest) {
   const authError = checkIngestAuth(req);
   if (authError) return authError;
 
   const body = await req.json();
   const items: {
+    externalId: string;
     title: string;
     date: string;
-    done?: boolean;
     assignedToName?: string;
   }[] = body.items ?? [];
 
-  let created = 0;
+  let synced = 0;
   for (const it of items) {
+    if (!it.externalId || !it.title || !it.date) continue;
     const assignedTo = it.assignedToName
       ? await prisma.user.findFirst({ where: { name: it.assignedToName } })
       : null;
 
-    await prisma.checklistItem.create({
-      data: {
+    await prisma.checklistItem.upsert({
+      where: { externalId: it.externalId },
+      update: { title: it.title, date: new Date(it.date) },
+      create: {
+        externalId: it.externalId,
         title: it.title,
         date: new Date(it.date),
-        done: it.done ?? false,
         assignedToId: assignedTo?.id,
       },
     });
-    created++;
+    synced++;
   }
 
   await markSynced("calendar", "google_calendar_mcp");
 
-  return NextResponse.json({ ok: true, created });
+  return NextResponse.json({ ok: true, synced });
 }

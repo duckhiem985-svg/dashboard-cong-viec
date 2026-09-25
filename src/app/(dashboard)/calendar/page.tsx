@@ -1,93 +1,105 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader, StatCard } from "@/components/StatCard";
 import { SyncBadge } from "@/components/SyncBadge";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { revalidatePath } from "next/cache";
+
+export const dynamic = "force-dynamic";
+
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+const WEEKDAYS = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
 
 async function toggleDone(id: string, done: boolean) {
   "use server";
-  await prisma.checklistItem.update({
-    where: { id },
-    data: { done: !done },
-  });
+  await prisma.checklistItem.update({ where: { id }, data: { done: !done } });
   revalidatePath("/calendar");
 }
 
+function vnParts(date: Date) {
+  const v = new Date(date.getTime() + VN_OFFSET_MS);
+  return {
+    key: v.toISOString().slice(0, 10),
+    weekday: WEEKDAYS[v.getUTCDay()],
+    label: `${String(v.getUTCDate()).padStart(2, "0")}/${String(v.getUTCMonth() + 1).padStart(2, "0")}`,
+    time: `${String(v.getUTCHours()).padStart(2, "0")}:${String(v.getUTCMinutes()).padStart(2, "0")}`,
+  };
+}
+
 export default async function CalendarPage() {
+  const todayVn = new Date(Date.now() + VN_OFFSET_MS);
+  const startOfToday = new Date(
+    Date.UTC(todayVn.getUTCFullYear(), todayVn.getUTCMonth(), todayVn.getUTCDate()) - VN_OFFSET_MS
+  );
+
   const items = await prisma.checklistItem.findMany({
+    where: { externalId: { not: null }, date: { gte: startOfToday } },
     orderBy: { date: "asc" },
-    include: { assignedTo: true },
   });
 
+  const groups = new Map<string, { weekday: string; label: string; items: typeof items }>();
+  for (const it of items) {
+    const p = vnParts(it.date);
+    const g = groups.get(p.key) ?? { weekday: p.weekday, label: p.label, items: [] };
+    g.items.push(it);
+    groups.set(p.key, g);
+  }
+
   const pending = items.filter((i) => !i.done).length;
-  const done = items.length - pending;
 
   return (
     <div>
       <PageHeader
-        title="Checklist lịch"
-        description="Việc cần làm đồng bộ từ Google Calendar"
+        title="Lịch công việc"
+        description="Các cuộc họp và việc cần làm sắp tới, đồng bộ từ Google Calendar"
         badge={<SyncBadge module="calendar" />}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Tổng việc" value={formatNumber(items.length)} />
+        <StatCard label="Sắp tới" value={formatNumber(items.length)} />
         <StatCard label="Chưa hoàn thành" value={formatNumber(pending)} />
-        <StatCard label="Đã hoàn thành" value={formatNumber(done)} />
+        <StatCard label="Đã hoàn thành" value={formatNumber(items.length - pending)} />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Xong</th>
-              <th className="px-4 py-3">Việc cần làm</th>
-              <th className="px-4 py-3">Ngày</th>
-              <th className="px-4 py-3">Người phụ trách</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {items.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                  Chưa có việc nào.
-                </td>
-              </tr>
-            ) : (
-              items.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-3">
-                    <form action={toggleDone.bind(null, item.id, item.done)}>
-                      <button
-                        type="submit"
-                        className={`h-5 w-5 rounded border ${
-                          item.done
-                            ? "border-emerald-500 bg-emerald-500 text-white"
-                            : "border-slate-300 bg-white"
-                        }`}
-                        aria-label="toggle done"
-                      >
-                        {item.done ? "✓" : ""}
-                      </button>
-                    </form>
-                  </td>
-                  <td
-                    className={`px-4 py-3 ${
-                      item.done ? "text-slate-400 line-through" : "text-slate-800"
-                    }`}
-                  >
-                    {item.title}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(item.date)}</td>
-                  <td className="px-4 py-3 text-slate-500">
-                    {item.assignedTo?.name ?? "—"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {groups.size === 0 ? (
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">
+          Không có sự kiện công việc nào sắp tới.
+        </div>
+      ) : (
+        <div className="mt-6 space-y-4">
+          {[...groups.entries()].map(([key, g]) => (
+            <section key={key} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 px-4 py-3">
+                <h2 className="text-sm font-semibold text-slate-800">
+                  {g.weekday}, {g.label}
+                </h2>
+              </div>
+              <ul className="divide-y divide-slate-100">
+                {g.items.map((item) => {
+                  const p = vnParts(item.date);
+                  return (
+                    <li key={item.id} className="flex items-center gap-4 px-4 py-3 text-sm">
+                      <form action={toggleDone.bind(null, item.id, item.done)}>
+                        <button
+                          type="submit"
+                          aria-label={item.done ? "Đánh dấu chưa xong" : "Đánh dấu đã xong"}
+                          className="grid h-5 w-5 place-items-center rounded border border-slate-400 text-xs"
+                          style={item.done ? { background: "var(--good)", borderColor: "var(--good)", color: "#fff" } : undefined}
+                        >
+                          {item.done ? "✓" : ""}
+                        </button>
+                      </form>
+                      <span className="w-14 shrink-0 tabular-nums text-slate-600">{p.time}</span>
+                      <span className={item.done ? "text-slate-500 line-through" : "text-slate-900"}>
+                        {item.title}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

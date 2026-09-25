@@ -142,6 +142,7 @@ model SocialMetric {
 
 model ChecklistItem {
   id          String   @id @default(cuid())
+  externalId  String?  @unique
   title       String
   date        DateTime @default(now())
   done        Boolean  @default(false)
