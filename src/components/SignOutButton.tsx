@@ -7,11 +7,12 @@ export function SignOutButton() {
         "use server";
         await signOut({ redirectTo: "/login" });
       }}
-      className="border-t border-slate-200 p-3"
+      className="px-3 pb-4"
     >
       <button
         type="submit"
-        className="block w-full rounded-md px-3 py-2 text-center text-sm font-medium text-slate-500 hover:bg-slate-100"
+        className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-white/10"
+        style={{ color: "var(--nav-text)" }}
       >
         Đăng xuất
       </button>

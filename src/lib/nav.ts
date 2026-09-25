@@ -5,13 +5,13 @@ export type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Tổng quan", icon: "📊" },
-  { href: "/email", label: "Đọc email", icon: "📧" },
-  { href: "/customers", label: "Chăm sóc khách hàng", icon: "🧑‍🤝‍🧑" },
-  { href: "/inventory", label: "Nhập kho", icon: "📦" },
-  { href: "/finance", label: "Tài chính", icon: "💰" },
-  { href: "/revenue", label: "Doanh thu", icon: "📈" },
-  { href: "/ads", label: "Google Ads", icon: "🔍" },
-  { href: "/facebook", label: "Facebook view", icon: "📱" },
-  { href: "/calendar", label: "Checklist lịch", icon: "✅" },
+  { href: "/", label: "Tổng quan", icon: "layout" },
+  { href: "/customers", label: "Chăm sóc khách hàng", icon: "users" },
+  { href: "/revenue", label: "Doanh thu", icon: "trending" },
+  { href: "/finance", label: "Tài chính & công nợ", icon: "wallet" },
+  { href: "/inventory", label: "Nhập kho", icon: "package" },
+  { href: "/ads", label: "Google Ads", icon: "megaphone" },
+  { href: "/facebook", label: "Facebook", icon: "thumbs" },
+  { href: "/email", label: "Email", icon: "mail" },
+  { href: "/calendar", label: "Checklist lịch", icon: "check" },
 ];

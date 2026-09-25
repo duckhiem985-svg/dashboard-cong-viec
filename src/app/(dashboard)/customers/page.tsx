@@ -3,6 +3,12 @@ import { PageHeader, StatCard } from "@/components/StatCard";
 import { SyncBadge } from "@/components/SyncBadge";
 import { formatVND, formatNumber, formatDate } from "@/lib/format";
 
+const STATUS_LABEL: Record<string, string> = {
+  moi: "Mới",
+  dang_cham_soc: "Đang chăm sóc",
+  da_mua: "Đã mua",
+};
+
 export default async function CustomersPage() {
   const salesUsers = await prisma.user.findMany({
     where: { role: "SALES", active: true },
@@ -128,7 +134,7 @@ export default async function CustomersPage() {
                   <td className="px-4 py-3">{c.assignedSales?.name ?? "—"}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                      {c.status}
+                      {STATUS_LABEL[c.status] ?? c.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-500">

@@ -2,7 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  TrendingUp,
+  Wallet,
+  Package,
+  Megaphone,
+  ThumbsUp,
+  Mail,
+  ListChecks,
+  type LucideIcon,
+} from "lucide-react";
 import { navItems } from "@/lib/nav";
+
+const icons: Record<string, LucideIcon> = {
+  layout: LayoutDashboard,
+  users: Users,
+  trending: TrendingUp,
+  wallet: Wallet,
+  package: Package,
+  megaphone: Megaphone,
+  thumbs: ThumbsUp,
+  mail: Mail,
+  check: ListChecks,
+};
 
 export function Sidebar({
   userName,
@@ -16,40 +40,48 @@ export function Sidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <p className="text-sm font-semibold text-slate-900">
-          Dashboard công việc
+    <aside
+      className="flex h-screen w-64 shrink-0 flex-col"
+      style={{ background: "var(--nav-bg)" }}
+    >
+      <div className="px-5 py-5">
+        <p className="text-[15px] font-semibold text-white">Bao Bì Giấy Toàn Quốc</p>
+        <p className="mt-0.5 text-xs" style={{ color: "var(--nav-text)" }}>
+          Dashboard theo dõi công việc
         </p>
-        <p className="text-xs text-slate-500">{userName}</p>
-        <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-          {userRole}
-        </span>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         {navItems.map((item) => {
           const active =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const Icon = icons[item.icon];
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition ${
-                active
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+              style={{
+                background: active ? "var(--nav-active)" : "transparent",
+                color: active ? "#ffffff" : "var(--nav-text)",
+              }}
             >
-              <span>{item.icon}</span>
+              <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
               <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
+      <div
+        className="mx-3 mb-2 rounded-lg px-3 py-3"
+        style={{ background: "var(--nav-active)" }}
+      >
+        <p className="truncate text-sm font-medium text-white">{userName}</p>
+        <p className="text-xs" style={{ color: "var(--nav-text)" }}>
+          {userRole}
+        </p>
+      </div>
       {footer}
     </aside>
   );

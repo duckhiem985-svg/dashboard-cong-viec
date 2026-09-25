@@ -28,8 +28,8 @@ export default async function DashboardLayout({
         userRole={ROLE_LABEL[role] ?? role}
         footer={<SignOutButton />}
       />
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-6">
-        {children}
+      <main className="flex-1 overflow-y-auto p-8" style={{ background: "var(--page)" }}>
+        <div className="mx-auto max-w-[1280px]">{children}</div>
       </main>
     </div>
   );
