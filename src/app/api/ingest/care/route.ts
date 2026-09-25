@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { checkIngestAuth, markSynced } from "@/lib/ingest";
 
@@ -31,10 +32,22 @@ export async function POST(req: NextRequest) {
 
   let created = 0;
   for (const entry of entries) {
-    const sales = await prisma.user.findFirst({
-      where: { name: entry.salesName },
+    const slug = entry.salesName
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ".")
+      .replace(/^\.|\.$/g, "");
+    const sales = await prisma.user.upsert({
+      where: { email: `${slug}@crm.local` },
+      update: {},
+      create: {
+        email: `${slug}@crm.local`,
+        name: entry.salesName,
+        role: "SALES",
+        passwordHash: await bcrypt.hash(crypto.randomUUID(), 10),
+      },
     });
-    if (!sales) continue;
 
     let customer = await prisma.customer.findFirst({
       where: { name: entry.customerName },
