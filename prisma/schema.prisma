@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+  KETOAN
+  KHO
+  MARKETING
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(SALES)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  customers      Customer[]      @relation("AssignedSales")
+  careLogs       CareLog[]
+  orders         Order[]
+  inventoryTxns  InventoryTransaction[]
+  financeTxns    FinanceTransaction[]
+  checklistItems ChecklistItem[]
+}
+
+model Customer {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String?
+  email           String?
+  source          String?
+  status          String   @default("moi")
+  assignedSalesId String?
+  assignedSales   User?    @relation("AssignedSales", fields: [assignedSalesId], references: [id])
+  createdAt       DateTime @default(now())
+
+  careLogs CareLog[]
+  orders   Order[]
+}
+
+model CareLog {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  salesId    String
+  sales      User     @relation(fields: [salesId], references: [id])
+  note       String
+  result     String?
+  date       DateTime @default(now())
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  customerId  String
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  salesId     String
+  sales       User        @relation(fields: [salesId], references: [id])
+  orderDate   DateTime    @default(now())
+  totalAmount Float       @default(0)
+  status      String      @default("pending")
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id])
+  productName String
+  quantity  Int
+  unitPrice Float
+}
+
+model InventoryItem {
+  id             String   @id @default(cuid())
+  sku            String   @unique
+  name           String
+  unit           String
+  quantityOnHand Float    @default(0)
+
+  transactions InventoryTransaction[]
+}
+
+model InventoryTransaction {
+  id        String        @id @default(cuid())
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  type      String
+  quantity  Float
+  note      String?
+  date      DateTime      @default(now())
+  createdById String
+  createdBy   User        @relation(fields: [createdById], references: [id])
+}
+
+model FinanceTransaction {
+  id          String   @id @default(cuid())
+  type        String
+  category    String
+  amount      Float
+  note        String?
+  date        DateTime @default(now())
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+}
+
+model RevenueEntry {
+  id     String   @id @default(cuid())
+  date   DateTime @default(now())
+  amount Float
+  source String
+  note   String?
+}
+
+model AdCampaign {
+  id          String   @id @default(cuid())
+  name        String
+  platform    String   @default("google_ads")
+  date        DateTime @default(now())
+  spend       Float    @default(0)
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  conversions Int      @default(0)
+}
+
+model SocialMetric {
+  id         String   @id @default(cuid())
+  platform   String   @default("facebook")
+  date       DateTime @default(now())
+  views      Int      @default(0)
+  reach      Int      @default(0)
+  engagement Int      @default(0)
+}
+
+model ChecklistItem {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime @default(now())
+  done        Boolean  @default(false)
+  assignedToId String?
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
+}
+
+model EmailLog {
+  id         String   @id @default(cuid())
+  subject    String
+  sender     String
+  receivedAt DateTime @default(now())
+  summary    String?
+  category   String   @default("general")
+}
+
+model DebtRecord {
+  id           String    @id @default(cuid())
+  customerName String
+  amount       Float
+  dueDate      DateTime?
+  daysOverdue  Int       @default(0)
+  note         String?
+  syncedAt     DateTime  @default(now())
+}
+
+/// Theo dõi thời điểm mỗi module dữ liệu được đồng bộ lần cuối (từ Claude schedule / MCP)
+model SyncStatus {
+  id           String   @id @default(cuid())
+  module       String   @unique
+  lastSyncedAt DateTime @default(now())
+  source       String?
+  note         String?
+}
