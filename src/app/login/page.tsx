@@ -46,14 +46,15 @@ export default async function LoginPage({
         <form action={login} className="mt-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700">
-              Email
+              Tên đăng nhập
             </label>
             <input
               name="email"
-              type="email"
+              type="text"
               required
+              autoCapitalize="none"
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-              placeholder="ban@congty.com"
+              placeholder="Tên đăng nhập"
             />
           </div>
           <div>
