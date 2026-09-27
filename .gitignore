@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # database
 /prisma/dev.db
@@ -39,10 +40,12 @@ yarn-error.log*
 
 # vercel
 .vercel
+.deploy-cli
+.npm-deploy-cache
+
+# Local junctions generated from the tracked .agents skills
+/.claude/skills/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.vercel
-.env*

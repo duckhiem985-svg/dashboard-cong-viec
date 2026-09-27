@@ -94,7 +94,7 @@ export function shiftIso(iso: string, days: number): string {
 }
 
 export function foldText(s: string): string {
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
 }
 
 export async function getCareReport(iso: string): Promise<CareReport> {

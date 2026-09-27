@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { signIn, auth } from "@/auth";
 import { AuthError } from "next-auth";
+import { UsernameInput } from "./UsernameInput";
 
 export default async function LoginPage({
   searchParams,
@@ -15,6 +16,7 @@ export default async function LoginPage({
     "use server";
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+    if (!email || /\s/.test(email)) redirect("/login?error=space");
     try {
       await signIn("credentials", {
         email,
@@ -48,11 +50,12 @@ export default async function LoginPage({
           <span className="editorial-eyebrow">Chào mừng trở lại</span>
           <h2 id="login-title">Đăng nhập</h2>
           <p>Dùng tài khoản được cấp để vào bảng điều khiển công việc.</p>
-          {error && <p className="login-error" role="alert">Email hoặc mật khẩu không đúng.</p>}
+          {error && <p className="login-error" role="alert">{error === "space" ? "Tên đăng nhập không được có dấu cách." : "Tên đăng nhập hoặc mật khẩu không đúng."}</p>}
           <form action={login} className="mt-7 space-y-5">
             <div>
               <label htmlFor="login-email">Tên đăng nhập</label>
-              <input id="login-email" name="email" type="text" required autoComplete="username" autoCapitalize="none" placeholder="Tên đăng nhập" />
+              <UsernameInput />
+              <p id="login-username-hint" className="mt-1 text-xs text-slate-500">Không dùng dấu cách.</p>
             </div>
             <div>
               <label htmlFor="login-password">Mật khẩu</label>

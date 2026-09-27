@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dashboard theo dõi công việc
 
-## Getting Started
+Dashboard nội bộ Bao Bì Giấy Toàn Quốc, xây bằng Next.js, React, TypeScript và Prisma. Database PostgreSQL được chạy trên Neon; website deploy trên Vercel.
 
-First, run the development server:
+## Cài đặt và chạy
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. Cài Node.js và chạy `npm ci` trong thư mục dự án.
+2. Sao chép `.env.example` thành `.env.local`, điền thông tin database, `AUTH_SECRET` và `INGEST_API_KEY` riêng.
+3. Chạy `npx prisma generate`.
+4. Với database mới, kiểm tra schema rồi chạy `npx prisma db push`.
+5. Chạy `npm run dev`, mở `http://localhost:3000`.
+
+Tài khoản đăng nhập nằm trong database. Không lưu mật khẩu của tài khoản đang dùng trong Git. `npm run db:seed` tạo dữ liệu mẫu; chỉ chạy trên database thử nghiệm vì script thêm dữ liệu mẫu và không dùng để khôi phục production.
+
+## Các lệnh
+
+| Lệnh | Chức năng |
+|---|---|
+| `npm run dev` | Chạy local |
+| `npm run lint` | Kiểm tra ESLint |
+| `npm run build` | Generate Prisma và build production |
+| `npm start` | Chạy bản production đã build |
+| `npm run db:studio` | Mở Prisma Studio |
+
+## Cấu trúc
+
+```text
+src/app/          Các trang, server actions và API ingest
+src/components/   Component giao diện
+src/lib/          Truy vấn dữ liệu và tiện ích
+prisma/           Schema và seed dữ liệu mẫu
+product-specs/    Đặc tả sản phẩm, UI và thứ tự triển khai từng trang
+design-demos/     Prototype HTML và ảnh tham khảo
+docs/             Hướng dẫn vận hành
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Luồng dữ liệu
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Task lấy dữ liệu từ CRM/công cụ nguồn → gửi tới `/api/ingest/*` với header `x-api-key` → Prisma ghi PostgreSQL → dashboard đọc lại để hiển thị. Code được push lên Git không bao gồm các bản ghi database. Dữ liệu thật vẫn nằm trên Neon.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Đặc tả CSKH và giới hạn dữ liệu hiện tại nằm trong [product-specs/cskh](product-specs/cskh/README.md). Các file `.env`, token, database local, thư mục dependencies, cache và build đã được loại khỏi Git. Cấu hình môi trường production được quản lý riêng trên Vercel.

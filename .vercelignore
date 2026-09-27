@@ -1,3 +1,10 @@
 .env
 .env.local
 prisma/dev.db
+.deploy-cli
+.npm-deploy-cache
+design-demos
+direction-approved.md
+.agents
+.claude
+skills-lock.json
