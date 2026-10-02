@@ -51,7 +51,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         <form action="/customers" method="get" className="care-v2-date-form">
           <CalendarDays size={18} strokeWidth={1.8} aria-hidden="true" /><label className="sr-only" htmlFor="care-date">Chọn ngày</label><input id="care-date" type="date" name="date" defaultValue={iso} max={yesterday} />
           {q && <input type="hidden" name="q" value={q} />}{staffFilter && <input type="hidden" name="staff" value={staffFilter} />}
-          <button type="submit">Xem ngày</button>
+          <button type="submit">Xem</button>
         </form>
         {iso < yesterday ? <Link className="care-v2-icon-button" href={href({ date: shiftIso(iso, 1), customer: "" })} aria-label="Ngày sau"><ChevronRight size={18} /></Link> : <span className="care-v2-icon-button is-disabled" aria-label="Đang xem ngày gần nhất"><ChevronRight size={18} /></span>}
       </div>
@@ -61,7 +61,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <div className="care-v2-overview">
         <section className="care-v2-feature" aria-labelledby="care-summary-title">
           <div className="care-v2-feature-top"><span id="care-summary-title">Kết quả chăm sóc · {displayDate(iso)}</span><UsersRound size={22} strokeWidth={1.6} aria-hidden="true" /></div>
-          <div className="care-v2-feature-main"><strong>{formatNumber(report.customers.length)}</strong><span>khách hàng<br />được ghi nhận</span></div>
+          <div className="care-v2-feature-main"><strong>{formatNumber(report.customers.length)}</strong><span>khách hàng được ghi nhận</span></div>
           <div className="care-v2-feature-status"><Info size={15} aria-hidden="true" /> Chưa có số CRM để đối soát</div>
           <div className="care-v2-feature-bottom"><div><strong>{formatNumber(report.activities)}</strong><span>lượt chăm sóc</span></div><div><strong>{formatNumber(report.staff.length)}</strong><span>nhân viên tham gia</span></div><div className="care-v2-source"><span>Nguồn: CRM Incomsoft</span><SyncBadge module="customers" /></div></div>
         </section>

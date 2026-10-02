@@ -2,6 +2,8 @@
 
 Folder này là nguồn đặc tả để triển khai lại từng trang. Hiện mới **chốt CSKH**; các trang còn lại sẽ có thư mục riêng khi được phân tích. Đây là tài liệu, chưa phải thay đổi UI hay API.
 
+[Kế hoạch UI mobile](mobile-ui-plan.md) đánh giá khung chung và 5 mục đang hiển thị, đồng thời chia thứ tự thực hiện. Phần CSKH vẫn tuân theo đặc tả trong `cskh/`.
+
 ## Cấu trúc
 
 ```text

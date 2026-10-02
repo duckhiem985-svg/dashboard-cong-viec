@@ -156,8 +156,10 @@ a, button, input { -webkit-tap-highlight-color: transparent; }
   .overview-grid .stat-card:nth-child(-n+2) { border-bottom: 0; }
   .overview-panels { grid-template-columns: 1fr; }
   .login-shell { grid-template-columns: 1fr; }
-  .login-story { min-height: 280px; }
-  .login-story h1 { margin: 32px 0; font-size: clamp(48px, 10vw, 72px); }
+  .login-story { min-height: 0; padding: 24px 20px 0; border-right: 0; background: var(--page); }
+  .login-story-message, .login-story-footer { display: none; }
+  .login-form-side { display: block; padding: 32px 20px 40px; }
+  .login-card { width: min(100%, 390px); margin: 0 auto; }
 }
 @media (max-width: 480px) {
   .dashboard-content { padding-left: 17px; padding-right: 17px; }
@@ -168,8 +170,8 @@ a, button, input { -webkit-tap-highlight-color: transparent; }
   .stat-card { min-height: 135px; }
   .overview-panel { padding: 20px; }
   .overview-panel-head { align-items: flex-start; flex-direction: column; }
-  .login-story { min-height: 260px; padding: 26px; }
-  .login-form-side { padding: 40px 24px; }
+  .login-story { padding: 22px 20px 0; }
+  .login-form-side { padding: 28px 20px 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

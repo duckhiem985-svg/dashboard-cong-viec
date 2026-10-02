@@ -38,12 +38,12 @@ export default async function LoginPage({
           <span>Bao Bì Giấy<br />Toàn Quốc</span>
           <small>Không gian điều hành</small>
         </div>
-        <div>
+        <div className="login-story-message">
           <span className="editorial-eyebrow">Dashboard nội bộ</span>
           <h1>Một ngày,<br />một nhịp rõ ràng.</h1>
           <p>Theo dõi công việc, chăm sóc khách hàng và email trong cùng một không gian.</p>
         </div>
-        <span className="editorial-eyebrow">Bao Bì Giấy Toàn Quốc</span>
+        <span className="editorial-eyebrow login-story-footer">Bao Bì Giấy Toàn Quốc</span>
       </section>
       <section className="login-form-side" aria-labelledby="login-title">
         <div className="login-card">
