@@ -1,12 +1,28 @@
-// Lấy báo cáo chăm sóc khách hàng từ CRM incomSoft bằng HTTP thuần (không cần trình duyệt).
-// Tái hiện đúng các request mà trang Customer_Cares gọi khi bấm tay.
-import type { CareEntry } from "@/lib/ingest";
+// Đọc CRM incomSoft (SugarCRM) bằng HTTP thuần (không cần trình duyệt).
+// Chỉ đọc, không ghi gì vào CRM.
 
 const BASE = "https://giaytoanquoc.incomsoft.vn/index.php";
-const STATUSES = "Hoàn tất|Chưa xử lý|Đang thực hiện|Đã hủy";
+const TIMEOUT_MS = 30_000;
+
+/** fetch có hẹn giờ + thử lại 3 lần (CRM thỉnh thoảng chậm hoặc rớt kết nối) */
+async function fetchRetry(url: string, init: RequestInit): Promise<Response> {
+  let last: unknown;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
+      if (res.status >= 500) throw new Error(`CRM trả HTTP ${res.status}`);
+      return res;
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 2000 * (i + 1)));
+    }
+  }
+  throw new Error(`Không kết nối được CRM sau 3 lần thử: ${last instanceof Error ? last.message : String(last)}`);
+}
 
 async function login(): Promise<string> {
-  const res = await fetch(BASE, {
+  if (!process.env.CRM_USERNAME || !process.env.CRM_PASSWORD) throw new Error("Thiếu CRM_USERNAME / CRM_PASSWORD trong biến môi trường");
+  const res = await fetchRetry(BASE, {
     method: "POST",
     redirect: "manual",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -18,8 +34,8 @@ async function login(): Promise<string> {
       login_module: "Home",
       login_action: "index",
       userStyle: "Sales",
-      user_name: process.env.CRM_USERNAME ?? "",
-      user_password: process.env.CRM_PASSWORD ?? "",
+      user_name: process.env.CRM_USERNAME,
+      user_password: process.env.CRM_PASSWORD,
     }),
   });
   const cookie = res.headers
@@ -30,19 +46,26 @@ async function login(): Promise<string> {
   return cookie;
 }
 
-async function crm(cookie: string, params: Record<string, string>, method = "POST") {
-  const body = new URLSearchParams(params);
-  const res = await fetch(method === "GET" ? `${BASE}?${body}` : BASE, {
-    method,
-    headers: { cookie, "Content-Type": "application/x-www-form-urlencoded" },
-    body: method === "GET" ? undefined : body,
-  });
-  const html = await res.text();
-  if (html.includes('name="user_password"')) throw new Error("CRM login thất bại (sai tài khoản/mật khẩu?)");
-  return html;
+/** Phiên CRM: tự đăng nhập lại 1 lần nếu phiên hết hạn giữa chừng */
+export async function crmSession() {
+  let cookie = await login();
+  return async function get(params: Record<string, string>, method: "GET" | "POST" = "POST"): Promise<string> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const body = new URLSearchParams(params);
+      const res = await fetchRetry(method === "GET" ? `${BASE}?${body}` : BASE, {
+        method,
+        headers: { cookie, "Content-Type": "application/x-www-form-urlencoded" },
+        body: method === "GET" ? undefined : body,
+      });
+      const html = await res.text();
+      if (!html.includes('name="user_password"')) return html;
+      if (attempt === 0) cookie = await login();
+    }
+    throw new Error("CRM login thất bại (sai tài khoản/mật khẩu, hoặc tài khoản bị khóa?)");
+  };
 }
 
-function text(html: string) {
+export function text(html: string) {
   return html
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<[^>]+>/g, " ")
@@ -56,61 +79,39 @@ function text(html: string) {
     .trim();
 }
 
-/** day: "dd/mm/yyyy" */
-export async function fetchCareReport(day: string) {
-  const cookie = await login();
-  const base = {
-    date_from: day,
-    date_to: day,
-    module: "Customer_Cares",
-    action: "index",
-    query: "true",
-    to_pdf: "true",
-    is_ajax_call: "true",
-  };
+/** bỏ dấu, chữ thường, chỉ giữ a-z0-9 (quy tắc R7 của spec, dùng để ghép tên) */
+export function fold(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
 
-  // 1. Số khách "Đã chăm sóc" trong bảng "Tổng hợp kết quả Chăm sóc"
-  const summary = await crm(cookie, { ...base, isSummary: "true", loadGroup: "tasks_care" });
-  const count = Number(summary.match(/title="Đã chăm sóc">\s*(\d+)\s*</)?.[1] ?? NaN);
-  if (Number.isNaN(count)) throw new Error("Không đọc được số khách đã chăm sóc");
+/** "dd/mm/yyyy" hoặc "dd/mm/yyyy hh:mm" giờ Việt Nam → Date (UTC) */
+export function parseVnDate(s: string): Date | null {
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (!m) return null;
+  const [, d, mo, y, h = "0", mi = "0"] = m;
+  return new Date(Date.UTC(+y, +mo - 1, +d, +h - 7, +mi));
+}
 
-  // 2. Danh sách khách = bấm vào số đó
-  const customers: { id: string; name: string }[] = [];
-  if (count > 0) {
-    const list = await crm(cookie, {
-      ...base,
-      offset: "0",
-      limit: String(Math.max(count, 100)),
-      params: "type=all&care=yes&level=all&field=transaction_level",
-    });
-    const re = /<td[^>]*class="[^"]*acc-info[^"]*"[^>]*>[\s\S]*?<a[^>]*href="[^"]*record=([\w-]+)[^"]*"[^>]*>([\s\S]*?)<\/a>/g;
-    for (const m of list.matchAll(re)) customers.push({ id: m[1], name: text(m[2]) });
+/** Date → "dd/mm/yyyy" theo giờ Việt Nam */
+export function vnDay(dt: Date) {
+  const x = new Date(dt.getTime() + 7 * 3600_000);
+  return [x.getUTCDate(), x.getUTCMonth() + 1].map((n) => String(n).padStart(2, "0")).join("/") + `/${x.getUTCFullYear()}`;
+}
+
+/** Tách bảng HTML thành các dòng; mỗi dòng giữ html gốc (để lấy link) và chữ từng ô */
+export function tableRows(html: string) {
+  const rows: { html: string; cells: string[]; cellHtml: string[]; isHead: boolean }[] = [];
+  for (const chunk of html.split(/<tr\b/i).slice(1)) {
+    const end = chunk.search(/<\/tr>/i);
+    const tr = end >= 0 ? chunk.slice(0, end) : chunk;
+    const cellHtml = [...tr.matchAll(/<t([dh])\b[^>]*>([\s\S]*?)(?=<t[dh]\b|$)/gi)].map((m) => m[2].replace(/<\/t[dh]>\s*$/i, ""));
+    rows.push({ html: tr, cellHtml, cells: cellHtml.map(text), isHead: /<th\b/i.test(tr) });
   }
-
-  // 3. Tab "Hoạt động" của từng khách, lọc đúng ngày
-  const entries: CareEntry[] = [];
-  const isoDate = day.split("/").reverse().join("-");
-  for (const c of customers) {
-    const html = await crm(
-      cookie,
-      { to_pdf: "1", module: "MySettings", action: "LoadTabSubpanels", loadModule: "Accounts", record: c.id, subpanels: "activities" },
-      "GET",
-    );
-    const t = text(html);
-    const body = t.slice(t.indexOf("Người thực hiện") + "Người thực hiện".length);
-    for (const row of body.split(new RegExp(`(?= (?:${STATUSES}) )`))) {
-      if (!row.includes(day)) continue;
-      // "<Tình trạng> <Phân loại/Tiêu đề/Nội dung> <bắt đầu> <hoàn thành> ... <NHÂN VIÊN> sửa"
-      const m = row.trim().match(new RegExp(`^(?:${STATUSES})\\s+(.*?)\\s+(\\d{2}/\\d{2}/\\d{4} \\d{2}:\\d{2})(?:\\s+\\d{2}/\\d{2}/\\d{4} \\d{2}:\\d{2})*\\s+(.*?)\\s*sửa\\b`));
-      if (!m) continue;
-      entries.push({
-        customerName: c.name,
-        salesName: m[3] || "Không rõ",
-        note: `${m[1]} (${m[2].slice(11)})`,
-        date: isoDate,
-      });
-    }
-  }
-
-  return { day, count, customers: customers.length, entries };
+  return rows;
 }

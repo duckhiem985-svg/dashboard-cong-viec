@@ -169,6 +169,51 @@ model DebtRecord {
   syncedAt     DateTime  @default(now())
 }
 
+/// Công việc (= lượt chăm sóc) đọc từ module Tasks của CRM incomSoft. Nguồn của dashboard CSKH mới.
+/// id = mã bản ghi trên CRM nên quét lại không bao giờ trùng.
+model CrmTask {
+  id            String    @id
+  title         String
+  customer      String
+  customerKey   String    /// tên khách bỏ dấu, chữ thường — để ghép với module khác
+  customerCrmId String?
+  staff         String
+  type          String    /// Hỏi Hàng, Báo Giá, Đặt hàng, ...
+  status        String    /// Hoàn tất, Chưa xử lý, ...
+  startAt       DateTime
+  content       String?   /// nội dung ở trang chi tiết
+  detailAt      DateTime? /// lúc đọc nội dung; null = chưa đọc / cần đọc lại
+  deletedAt     DateTime? /// không còn thấy trên CRM ở lần quét gần nhất
+  firstSeenAt   DateTime  @default(now())
+  seenAt        DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastRunId     String?
+
+  @@index([startAt])
+  @@index([customerKey])
+}
+
+/// Nhật ký mỗi lần quét CRM: chạy lúc nào, đọc bao nhiêu, lỗi gì
+model CrmScanRun {
+  id         String    @id @default(cuid())
+  job        String
+  trigger    String    /// cron | manual
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  windowFrom DateTime?
+  windowTo   DateTime?
+  rows       Int       @default(0)
+  created    Int       @default(0)
+  updated    Int       @default(0)
+  deleted    Int       @default(0)
+  details    Int       @default(0)
+  detailsLeft Int      @default(0)
+  error      String?
+
+  @@index([job, startedAt])
+}
+
 /// Theo dõi thời điểm mỗi module dữ liệu được đồng bộ lần cuối (từ Claude schedule / MCP)
 model SyncStatus {
   id           String   @id @default(cuid())
